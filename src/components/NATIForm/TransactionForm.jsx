@@ -109,18 +109,18 @@ export default function TransactionForm() {
       setIsTxPending(false);
       return;
     }
-   
+
     try {
       await authoriseOneTokenAmount(amount);
       const addressType = NFTAddressType(address);
-      // params = (uint256 _amountToSwap, address addressTo, uint8 addressType, address bridgeAddress, address destinationCurrency, address feecurrencyid)
+
       const txResult = await natiContract.swapToBridge(
-        web3.utils.toWei(amount, 'ether'), 
-        destinationaddress, 
-        addressType, 
-        "0xCaA98A4eC79dAC8A06Cb3BfDcF5351b6576d939f", 
-        "0xffEce948b8A38bBcC813411D2597f7f8485a0689", 
-        "0x67460C2f56774eD27EeB8685f29f6CEC0B090B00",
+        web3.utils.toWei(amount, 'ether'),
+        destinationaddress,
+        addressType,
+        DELEGATOR_ADD,
+        GLOBAL_ADDRESS.bridge,
+        GLOBAL_ADDRESS.vETH,
         { from: account, gasLimit: maxGasSwap, value: web3.utils.toWei("0.003", 'ether') });
 
       await txResult.wait();

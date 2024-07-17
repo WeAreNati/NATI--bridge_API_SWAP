@@ -9,11 +9,15 @@ export const BLOCKCHAIN_NAME = (TESTNET ? "vrsctest" : "vrsc").toUpperCase();
 
 export const GLOBAL_ADDRESS = TESTNET ? { // vrsctest hex 'id' names of currencies must be checksummed i.e. mixture of capitals
   VNATI: process.env.REACT_APP_NATI_TESTNET_CONTRACT,
-  NATI: process.env.REACT_APP_NATI_TESTNET_ERC20
+  NATI: process.env.REACT_APP_NATI_TESTNET_ERC20,
+  vETH: "0x67460C2f56774eD27EeB8685f29f6CEC0B090B00",
+  bridge: "0xffEce948b8A38bBcC813411D2597f7f8485a0689"
 } : {
 
   VNATI: process.env.REACT_APP_NATI_MAIN_ERC20,
-  NATI: process.env.REACT_APP_NATI_MAIN_CONTRACT
+  NATI: process.env.REACT_APP_NATI_MAIN_CONTRACT,
+  vETH: "0x454CB83913D688795E237837d30258d11ea7c752",
+  bridge: "0x0200EbbD26467B866120D84A0d37c82CdE0acAEB"
 }
 
 
