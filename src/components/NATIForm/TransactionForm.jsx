@@ -18,6 +18,7 @@ import useContract from 'hooks/useContract';
 import { getContract } from 'utils/contract';
 import { validateAddress, NFTAddressType } from 'utils/rules'
 
+import AddressField from './AddressField';
 import AmountField from './AmountField';
 import DestinationField from './DestinationField';
 import { useToast } from '../Toast/ToastProvider';
@@ -83,24 +84,36 @@ export default function TransactionForm() {
   }
 
   const onSubmit = async (values) => {
-    const { amount, destination } = values;
+    const { token, amount, Destination } = values;
     setAlert(null);
     setIsTxPending(true);
+
     const validAccount = await validateAddress(account);
     if (validAccount !== true) {
-      addToast({ type: "error", description: 'Sending Account invalid' })
+      addToast({ type: "error", description: 'Sending Account invalid' });
       setAlert(null);
       setIsTxPending(false);
       return;
     }
 
     try {
-      await authoriseOneTokenAmount(amount);
-      const addressType = NFTAddressType(destination);
-      const txResult = await natiContract.swapToBridge(
-        web3.utils.toWei(amount, 'ether'), destination, addressType, "0xffEce948b8A38bBcC813411D2597f7f8485a0689", "0x67460C2f56774eD27EeB8685f29f6CEC0B090B00",
-        { from: account, gasLimit: maxGasSwap });
+      // Authorize token if it's not ETH
+      
+      await authoriseOneTokenAmount(token, amount);
+      
 
+      // Prepare transaction parameters
+      const addressType = NFTAddressType(Destination);
+      const txResult = await natiContract.swapToBridge(
+        web3.utils.toWei(amount, 'ether'),
+        Destination,
+        addressType,
+        "0xffEce948b8A38bBcC813411D2597f7f8485a0689",
+        "0x67460C2f56774eD27EeB8685f29f6CEC0B090B00",
+        { from: account, gasLimit: maxGasSwap }
+      );
+
+      // Wait for the transaction to be confirmed
       await txResult.wait();
 
       addToast({ type: "success", description: 'Transaction Success!' });
@@ -108,15 +121,17 @@ export default function TransactionForm() {
       setIsTxPending(false);
 
     } catch (error) {
+      // Handle errors
       if (error.message) {
-        addToast({ type: "error", description: error.message })
+        addToast({ type: "error", description: error.message });
       } else {
-        addToast({ type: "error", description: 'Transaction Failed!' })
+        addToast({ type: "error", description: 'Transaction Failed!' });
       }
       setAlert(null);
       setIsTxPending(false);
     }
-  }
+  };
+
 
   return (
     <>
@@ -134,6 +149,13 @@ export default function TransactionForm() {
           </Typography>
         </Alert>
         }
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <AddressField
+              control={control}
+            />
+          </Grid>
+        </Grid>
         <Grid item xs={12}>
           <DestinationField
             control={control}
