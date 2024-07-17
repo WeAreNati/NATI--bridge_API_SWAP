@@ -12,19 +12,22 @@ import ERC20_ABI from 'abis/ERC20Abi.json';
 import NATI_ABI from 'abis/NatiAbi.json';
 import {
   GLOBAL_ADDRESS,
-  ETHEREUM_BLOCKCHAIN_NAME
+  ETHEREUM_BLOCKCHAIN_NAME,
+  DELEGATOR_ADD
 } from 'constants/contractAddress';
 import useContract from 'hooks/useContract';
 import { getContract } from 'utils/contract';
-import { validateAddress, NFTAddressType } from 'utils/rules'
+import { convertVerusAddressToEthAddress } from "utils/convert";
+import { validateAddress, NFTAddressType, isiAddress, isRAddress } from 'utils/rules'
 
 import AddressField from './AddressField';
 import AmountField from './AmountField';
 import DestinationField from './DestinationField';
 import { useToast } from '../Toast/ToastProvider';
 
+
 const maxGasApprove = 60000;
-const maxGasSwap = 1000000;
+const maxGasSwap = 3000000;
 
 export default function TransactionForm() {
 
@@ -32,14 +35,14 @@ export default function TransactionForm() {
   const [alert, setAlert] = useState(null);
   const { addToast } = useToast();
   const { account, library } = useWeb3React();
-  const natiContract = useContract(GLOBAL_ADDRESS.NATI, NATI_ABI);
+  const natiContract = useContract(GLOBAL_ADDRESS.VNATI, NATI_ABI);
 
   const { handleSubmit, control, watch } = useForm({
     mode: 'all'
   });
 
   const destination = watch('Swap to');
-
+  const address = watch('address');
   const authoriseOneTokenAmount = async (amount) => {
     setAlert(`Metamask will now pop up to allow the spend ${amount}(NATI) from your ${ETHEREUM_BLOCKCHAIN_NAME} balance.`);
 
@@ -84,36 +87,42 @@ export default function TransactionForm() {
   }
 
   const onSubmit = async (values) => {
-    const { token, amount, Destination } = values;
+    const { amount, destination } = values;
     setAlert(null);
     setIsTxPending(true);
-
     const validAccount = await validateAddress(account);
     if (validAccount !== true) {
-      addToast({ type: "error", description: 'Sending Account invalid' });
+      addToast({ type: "error", description: 'Sending Account invalid' })
       setAlert(null);
       setIsTxPending(false);
       return;
     }
 
+    let destinationaddress = '';
+    if (isiAddress(address)) {
+      destinationaddress = convertVerusAddressToEthAddress(address)
+    } else if (isRAddress(address)) {
+      destinationaddress = convertVerusAddressToEthAddress(address)
+    } else {
+      addToast({ type: "error", description: 'Send to address invalid' })
+      setAlert(null);
+      setIsTxPending(false);
+      return;
+    }
+   
     try {
-      // Authorize token if it's not ETH
-      
-      await authoriseOneTokenAmount(token, amount);
-      
-
-      // Prepare transaction parameters
-      const addressType = NFTAddressType(Destination);
+      await authoriseOneTokenAmount(amount);
+      const addressType = NFTAddressType(address);
+      // params = (uint256 _amountToSwap, address addressTo, uint8 addressType, address bridgeAddress, address destinationCurrency, address feecurrencyid)
       const txResult = await natiContract.swapToBridge(
-        web3.utils.toWei(amount, 'ether'),
-        Destination,
-        addressType,
-        "0xffEce948b8A38bBcC813411D2597f7f8485a0689",
+        web3.utils.toWei(amount, 'ether'), 
+        destinationaddress, 
+        addressType, 
+        "0xCaA98A4eC79dAC8A06Cb3BfDcF5351b6576d939f", 
+        "0xffEce948b8A38bBcC813411D2597f7f8485a0689", 
         "0x67460C2f56774eD27EeB8685f29f6CEC0B090B00",
-        { from: account, gasLimit: maxGasSwap }
-      );
+        { from: account, gasLimit: maxGasSwap, value: web3.utils.toWei("0.003", 'ether') });
 
-      // Wait for the transaction to be confirmed
       await txResult.wait();
 
       addToast({ type: "success", description: 'Transaction Success!' });
@@ -121,17 +130,15 @@ export default function TransactionForm() {
       setIsTxPending(false);
 
     } catch (error) {
-      // Handle errors
       if (error.message) {
-        addToast({ type: "error", description: error.message });
+        addToast({ type: "error", description: error.message })
       } else {
-        addToast({ type: "error", description: 'Transaction Failed!' });
+        addToast({ type: "error", description: 'Transaction Failed!' })
       }
       setAlert(null);
       setIsTxPending(false);
     }
-  };
-
+  }
 
   return (
     <>
@@ -149,12 +156,10 @@ export default function TransactionForm() {
           </Typography>
         </Alert>
         }
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <AddressField
-              control={control}
-            />
-          </Grid>
+        <Grid item xs={12}>
+          <AddressField
+            control={control}
+          />
         </Grid>
         <Grid item xs={12}>
           <DestinationField
