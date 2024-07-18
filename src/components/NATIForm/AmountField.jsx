@@ -38,6 +38,7 @@ const AmountField = ({ control, destination }) => {
       control={control}
       type="tel"
       defaultValue="0"
+      helperText="Fee: 0.003 ETH"
       min={0}
       rules={{
         required: 'Amount is required',
